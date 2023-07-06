@@ -6,80 +6,158 @@
 //
 
 import SwiftUI
-import CoreData
+
 
 struct ContentView: View {
-    @Environment(\.managedObjectContext) private var viewContext
-
-    @FetchRequest(
-        sortDescriptors: [NSSortDescriptor(keyPath: \Item.timestamp, ascending: true)],
-        animation: .default)
-    private var items: FetchedResults<Item>
-
+    @State private var selectedTab: Tab? = nil
+    @State private var searchText = ""
+    @ObservedObject var model = AuthenticationViewModel()
+    
+    @State private var userRole: String? = nil
+    
+    enum Tab {
+        case stock
+        case meds
+        case addMeds
+        case billing
+        case sells
+    }
+    
     var body: some View {
-        NavigationView {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp!, formatter: itemFormatter)")
-                    } label: {
-                        Text(item.timestamp!, formatter: itemFormatter)
+            VStack{
+                NavigationView {
+                    
+                        if let userRole = userRole{
+                            
+                            if userRole == "ADMIN" {
+                                List {
+                                    Spacer()
+                                    Button(action: {
+                                        selectedTab = .stock
+                                    }) {
+                                        Label("Stoc", systemImage: "list.bullet")
+                                            .font(.system(size: 15))
+                                            .padding(8)
+                                    }
+                                    
+                                    Button(action: {
+                                        selectedTab = .meds
+                                    }) {
+                                        Label("Meds", systemImage: "list.bullet")
+                                            .font(.system(size: 15))
+                                            .padding(8)
+                                    }
+                                    
+                                    Button(action: {
+                                        selectedTab = .sells
+                                    }) {
+                                        Label("Vanzari", systemImage: "list.bullet")
+                                            .font(.system(size: 15))
+                                            .padding(8)
+                                    }
+                                    .frame(height: 12)
+
+                                    
+                                    Button(action: {
+                                        selectedTab = .addMeds
+                                    }) {
+                                        Label("Add Meds", systemImage: "plus.circle")
+                                            .font(.system(size: 15))
+                                            .padding(8)
+                                    }
+                                    
+                                    Button(action: {
+                                        selectedTab = .billing
+                                    }) {
+                                        Label("Check Out", systemImage: "plus.circle")
+                                            .font(.system(size: 15))
+                                            .padding(8)
+                                    }
+                                    .frame(height: 12)
+                                    
+                                    
+                            
+                                }
+                                //.background(Color("Color 1"))
+                                .frame(minWidth: 170,maxWidth: 175)
+                                .listStyle(SidebarListStyle())
+                                
+                            }else if userRole == "USER" {
+                                List {
+                                    Spacer()
+                                    Button(action: {
+                                        selectedTab = .stock
+                                    }) {
+                                        Label("Stoc", systemImage: "list.bullet")
+                                            .font(.system(size: 15))
+                                            .padding(8)
+                                    }
+                                    Button(action: {
+                                        selectedTab = .billing
+                                    }) {
+                                        Label("Check Out", systemImage: "plus.circle")
+                                            .font(.system(size: 15))
+                                            .padding(8)
+                                    }
+                                    .frame(height: 12)
+
+
+                            
+                                }
+                                //.background(Color("Color 1"))
+                                .listStyle(SidebarListStyle())
+                                .frame(minWidth: 100, idealWidth: 150, maxWidth: 300)
+                                
+                            }
+                        } else {
+                            // Tratați eroarea aici, de exemplu afișați un mesaj de eroare într-o alertă
+                           EmptyView()
+                        }
+
+                   
+                    switch selectedTab {
+                    case .stock:
+                        StockView()
+                    case .meds:
+                        MedsView()
+                    case .addMeds:
+                        AddMedsView()
+                    case .billing:
+                        BillingView()
+                    case .sells:
+                        SellsView()
+                    case .none:
+                        BillingView()
                     }
+                    
+                    
                 }
-                .onDelete(perform: deleteItems)
-            }
-            .toolbar {
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
-                    }
+                //.frame(maxHeight: 650)
+                .onAppear{
+                    getUserRole()
                 }
             }
-            Text("Select an item")
-        }
+            
+            //.frame(minWidth: 50, idealWidth: 50, maxWidth: 300)
+
+        
+        
     }
-
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(context: viewContext)
-            newItem.timestamp = Date()
-
-            do {
-                try viewContext.save()
-            } catch {
-                // Replace this implementation with code to handle the error appropriately.
-                // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
-                let nsError = error as NSError
-                fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
-            }
-        }
-    }
-
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            offsets.map { items[$0] }.forEach(viewContext.delete)
-
-            do {
-                try viewContext.save()
-            } catch {
-                // Replace this implementation with code to handle the error appropriately.
-                // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
-                let nsError = error as NSError
-                fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
+       
+    private func getUserRole() {
+        model.getUserRole { role, error in
+            if let role = role {
+                self.userRole = role
+            } else if error != nil {
+                // Tratează eroarea
             }
         }
     }
 }
 
-private let itemFormatter: DateFormatter = {
-    let formatter = DateFormatter()
-    formatter.dateStyle = .short
-    formatter.timeStyle = .medium
-    return formatter
-}()
 
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
-        ContentView().environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
+        ContentView()
     }
 }
